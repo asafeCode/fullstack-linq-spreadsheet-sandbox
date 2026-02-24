@@ -1,4 +1,7 @@
+using System;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace SpreadsheetFilterApp.Web.Middleware;
 

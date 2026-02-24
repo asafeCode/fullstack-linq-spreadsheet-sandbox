@@ -1,6 +1,9 @@
+using System;
+using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Scripting;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 
 namespace SpreadsheetFilterApp.Infrastructure.Scripting.Roslyn;

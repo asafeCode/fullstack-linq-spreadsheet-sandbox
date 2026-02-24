@@ -16,6 +16,7 @@ export class ApiError extends Error {
 }
 
 const DEFAULT_TIMEOUT_MS = 15000;
+const DEFAULT_DEV_API_BASE_URL = "http://localhost:5063";
 
 function normalizeBaseUrl(value: unknown): string | undefined {
   if (typeof value !== "string") {
@@ -36,7 +37,7 @@ function resolveBaseUrl(): string {
     return "";
   }
 
-  return normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) ?? "";
+  return normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) ?? DEFAULT_DEV_API_BASE_URL;
 }
 
 function resolveMessage(status: number, details?: ApiProblemDetails): string {

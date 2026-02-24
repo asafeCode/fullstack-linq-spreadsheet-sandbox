@@ -1,5 +1,6 @@
 using SpreadsheetFilterApp.Domain.Exceptions;
 using SpreadsheetFilterApp.Domain.ValueObjects;
+using Xunit;
 
 namespace SpreadsheetFilterApp.Domain.Tests;
 

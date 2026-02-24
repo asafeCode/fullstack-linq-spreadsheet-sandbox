@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace SpreadsheetFilterApp.Application.DTOs;
 
 public sealed class SpreadsheetSchemaDto

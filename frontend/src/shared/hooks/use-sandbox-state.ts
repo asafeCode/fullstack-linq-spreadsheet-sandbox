@@ -51,7 +51,7 @@ export interface SandboxState {
   runHistory: RunHistoryItem[];
 }
 
-const INITIAL_CODE = "rows.Where(row => true)";
+const INITIAL_CODE = "return rows.Where(row => true).ToList();";
 const PREVIEW_PAGE_SIZE = 250;
 
 const initialState: SandboxState = {
@@ -427,3 +427,4 @@ export function useSandboxState() {
     }
   };
 }
+

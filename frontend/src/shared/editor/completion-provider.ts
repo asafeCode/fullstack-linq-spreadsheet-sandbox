@@ -1,4 +1,4 @@
-﻿import type * as Monaco from "monaco-editor";
+import type * as Monaco from "monaco-editor";
 import type { QueryContractSheet, SpreadsheetColumn } from "../api/types";
 
 function linePrefix(model: Monaco.editor.ITextModel, position: Monaco.Position): string {
@@ -40,8 +40,12 @@ export function createCompletionProvider(
       }
 
       if (afterRowDot) {
+        const uniqueColumns = Array.from(
+          new Map(columns.map((column) => [column.normalizedName.toLowerCase(), column])).values()
+        );
+
         return {
-          suggestions: columns.map((column) => ({
+          suggestions: uniqueColumns.map((column) => ({
             label: column.normalizedName,
             kind: monaco.languages.CompletionItemKind.Field,
             detail: "JSON column",
@@ -56,4 +60,3 @@ export function createCompletionProvider(
     }
   });
 }
-

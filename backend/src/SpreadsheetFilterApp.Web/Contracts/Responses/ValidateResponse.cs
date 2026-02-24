@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace SpreadsheetFilterApp.Web.Contracts.Responses;
 
 public sealed class ValidateResponse

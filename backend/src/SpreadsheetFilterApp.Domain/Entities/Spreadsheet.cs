@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using SpreadsheetFilterApp.Domain.ValueObjects;
 
 namespace SpreadsheetFilterApp.Domain.Entities;

@@ -1,4 +1,4 @@
-﻿import Editor, { type Monaco } from "@monaco-editor/react";
+import Editor, { type Monaco } from "@monaco-editor/react";
 import type * as MonacoCore from "monaco-editor";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, WandSparkles, CheckCheck, ListFilter } from "lucide-react";
@@ -89,11 +89,7 @@ export function LinqEditorPanel({
     monaco.editor.setModelMarkers(model, "linq-diagnostics", mapDiagnosticsToMarkers(diagnostics));
   };
 
-  useEffect(() => {
-    applyMarkers();
-  }, [diagnostics]);
-
-  useEffect(() => {
+  const refreshCompletionProvider = (): void => {
     const monaco = monacoInstanceRef.current;
     if (!monaco) {
       return;
@@ -101,6 +97,14 @@ export function LinqEditorPanel({
 
     completionDisposableRef.current?.dispose();
     completionDisposableRef.current = createCompletionProvider(monaco, columns, sheets);
+  };
+
+  useEffect(() => {
+    applyMarkers();
+  }, [diagnostics]);
+
+  useEffect(() => {
+    refreshCompletionProvider();
 
     return () => {
       completionDisposableRef.current?.dispose();
@@ -154,6 +158,7 @@ export function LinqEditorPanel({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        <pre data-slot="linq-code-value" className="sr-only">{code}</pre>
         <div className="rounded-xl border border-border">
           <Editor
             height="340px"
@@ -166,7 +171,7 @@ export function LinqEditorPanel({
             onMount={(editor, monaco) => {
               monacoRef.current = editor;
               monacoInstanceRef.current = monaco;
-              completionDisposableRef.current = createCompletionProvider(monaco, columns, sheets);
+              refreshCompletionProvider();
               applyMarkers();
             }}
             options={{
@@ -249,9 +254,3 @@ export function LinqEditorPanel({
     </Card>
   );
 }
-
-
-
-
-
-

@@ -1,3 +1,5 @@
+using System;
+
 namespace SpreadsheetFilterApp.Application.Abstractions.Time;
 
 public interface IClock

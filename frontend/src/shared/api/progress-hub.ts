@@ -1,6 +1,8 @@
 import { HubConnectionBuilder, HubConnectionState, LogLevel } from "@microsoft/signalr";
 import type { UploadStatusResponse } from "./types";
 
+const DEFAULT_DEV_API_BASE_URL = "http://localhost:5063";
+
 function normalizeBaseUrl(value: unknown): string | undefined {
   if (typeof value !== "string") {
     return undefined;
@@ -20,7 +22,7 @@ function resolveHubUrl(): string {
     return "/hubs/query-progress";
   }
 
-  const base = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) ?? window.location.origin;
+  const base = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) ?? DEFAULT_DEV_API_BASE_URL;
   return `${base}/hubs/query-progress`;
 }
 

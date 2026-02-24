@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace SpreadsheetFilterApp.Domain.Services;
 
 public interface IColumnNameNormalizer

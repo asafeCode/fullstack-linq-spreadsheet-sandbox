@@ -1,5 +1,12 @@
-﻿using System.Text.Json;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using SpreadsheetFilterApp.Application.Abstractions.Spreadsheet;
 using SpreadsheetFilterApp.Domain.Services;
@@ -164,13 +171,19 @@ public sealed class QueryWorkerService : BackgroundService
             var dataset = await _jobs.LoadDatasetAsync(jobId, cancellationToken)
                 ?? throw new InvalidOperationException("Dataset not found for job.");
 
+            var upload = _jobs.GetUploadJob(jobId);
+            var unifiedFromMemory = upload?.WorkingSheets
+                .FirstOrDefault(x => string.Equals(x.Key, "unified", StringComparison.OrdinalIgnoreCase))
+                .Value;
+            var activeSheet1 = unifiedFromMemory ?? dataset.Sheet1;
+
             var payload = new SandboxRequestPayload
             {
                 Code = request.Code,
                 Sheet1 = new SandboxSheetPayload
                 {
-                    Headers = dataset.Sheet1.Headers,
-                    Rows = dataset.Sheet1.Rows
+                    Headers = activeSheet1.Headers,
+                    Rows = activeSheet1.Rows
                 },
                 Sheet2 = dataset.Sheet2 is null ? null : new SandboxSheetPayload
                 {

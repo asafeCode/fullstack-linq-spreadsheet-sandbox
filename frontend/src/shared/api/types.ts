@@ -98,6 +98,14 @@ export interface UnifySheetsRequest {
   comparisons: UnifyComparisonRequest[];
 }
 
+export interface SavedQuery {
+  id: number;
+  name: string;
+  linqCode: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
 export interface ApiProblemDetails {
   title?: string;
   detail?: string;

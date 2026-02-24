@@ -5,11 +5,13 @@ using SpreadsheetFilterApp.Web.Filters;
 using SpreadsheetFilterApp.Web.Middleware;
 using SpreadsheetFilterApp.Web.QueryRuntime;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure();
+builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.Configure<QueryRuntimeOptions>(builder.Configuration.GetSection("QueryRuntime"));
 builder.Services.AddSingleton<IQueryWorkQueue, QueryWorkQueue>();
 builder.Services.AddSingleton<IQueryJobService, QueryJobService>();

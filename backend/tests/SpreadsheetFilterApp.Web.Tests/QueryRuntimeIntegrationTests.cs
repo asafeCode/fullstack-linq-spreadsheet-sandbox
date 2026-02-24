@@ -1,8 +1,12 @@
+using System;
+using System.Linq;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Xunit;
 
 namespace SpreadsheetFilterApp.Web.Tests;
 
@@ -33,6 +37,23 @@ public sealed class QueryRuntimeIntegrationTests(WebApplicationFactory<Program> 
 
         var stage = statusDoc.RootElement.GetProperty("stage");
         Assert.Equal(JsonValueKind.String, stage.ValueKind);
+    }
+
+    [Fact]
+    public async Task Upload_WithFileAlias_AcceptsFormFieldNamedFile()
+    {
+        using var form = new MultipartFormDataContent();
+        using var file = new ByteArrayContent(Encoding.UTF8.GetBytes("Nome\nAna\n"));
+        file.Headers.ContentType = MediaTypeHeaderValue.Parse("text/csv");
+        form.Add(file, "file", "sample.csv");
+
+        var uploadResponse = await _client.PostAsync("/api/query/upload", form);
+        uploadResponse.EnsureSuccessStatusCode();
+        var uploadJson = await uploadResponse.Content.ReadAsStringAsync();
+        using var uploadDoc = JsonDocument.Parse(uploadJson);
+        var jobId = uploadDoc.RootElement.GetProperty("jobId").GetString();
+
+        Assert.False(string.IsNullOrWhiteSpace(jobId));
     }
 
     [Fact]
@@ -218,5 +239,195 @@ public sealed class QueryRuntimeIntegrationTests(WebApplicationFactory<Program> 
         Assert.True(first.TryGetProperty("nome", out _));
         Assert.True(first.TryGetProperty("id", out _));
         Assert.True(first.TryGetProperty("sheet2__telefone", out _));
+    }
+
+    [Fact]
+    public async Task Unify_ThenFilterByUnifiedColumn_UsesUnifiedRowsDuringExecution()
+    {
+        using var form = new MultipartFormDataContent();
+        using var file1 = new ByteArrayContent(Encoding.UTF8.GetBytes("nome,id\nAna,1\nBruno,2\nCarla,3\n"));
+        file1.Headers.ContentType = MediaTypeHeaderValue.Parse("text/csv");
+        form.Add(file1, "file1", "base.csv");
+
+        using var file2 = new ByteArrayContent(Encoding.UTF8.GetBytes("nome_guardiao,telefone\nAna,111\nBruno,222\n"));
+        file2.Headers.ContentType = MediaTypeHeaderValue.Parse("text/csv");
+        form.Add(file2, "file2", "guardiao.csv");
+
+        var uploadResponse = await _client.PostAsync("/api/query/upload", form);
+        uploadResponse.EnsureSuccessStatusCode();
+        var uploadJson = await uploadResponse.Content.ReadAsStringAsync();
+        using var uploadDoc = JsonDocument.Parse(uploadJson);
+        var jobId = uploadDoc.RootElement.GetProperty("jobId").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(jobId));
+
+        var ready = false;
+        for (var i = 0; i < 50; i++)
+        {
+            await Task.Delay(100);
+            var statusResponse = await _client.GetAsync($"/api/query/status/{jobId}");
+            statusResponse.EnsureSuccessStatusCode();
+            var statusJson = await statusResponse.Content.ReadAsStringAsync();
+            using var statusDoc = JsonDocument.Parse(statusJson);
+            if (string.Equals(statusDoc.RootElement.GetProperty("stage").GetString(), "Ready", StringComparison.OrdinalIgnoreCase))
+            {
+                ready = true;
+                break;
+            }
+        }
+
+        Assert.True(ready);
+
+        var unifyResponse = await _client.PostAsJsonAsync($"/api/query/{jobId}/unify", new
+        {
+            primarySheetName = "sheet1",
+            primaryKeyColumn = "nome",
+            comparisons = new[]
+            {
+                new
+                {
+                    sheetName = "sheet2",
+                    compareColumn = "nome_guardiao"
+                }
+            }
+        });
+        unifyResponse.EnsureSuccessStatusCode();
+
+        var executeResponse = await _client.PostAsJsonAsync($"/api/query/{jobId}/execute", new
+        {
+            code = """
+                return rows
+                    .Where(r => (r.Str("sheet2__telefone") ?? "") == "222")
+                    .ToList();
+                """,
+            maxRows = 100,
+            timeoutMs = 3000
+        });
+        executeResponse.EnsureSuccessStatusCode();
+
+        var executeJson = await executeResponse.Content.ReadAsStringAsync();
+        using var executeDoc = JsonDocument.Parse(executeJson);
+        var queryId = executeDoc.RootElement.GetProperty("queryId").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(queryId));
+
+        JsonDocument? finalStatusDoc = null;
+        for (var i = 0; i < 50; i++)
+        {
+            await Task.Delay(100);
+            var statusResponse = await _client.GetAsync($"/api/query/execute/{queryId}");
+            statusResponse.EnsureSuccessStatusCode();
+            var statusJson = await statusResponse.Content.ReadAsStringAsync();
+            finalStatusDoc?.Dispose();
+            finalStatusDoc = JsonDocument.Parse(statusJson);
+            var stage = finalStatusDoc.RootElement.GetProperty("stage").GetString();
+            if (stage is "Completed" or "Failed")
+            {
+                break;
+            }
+        }
+
+        Assert.NotNull(finalStatusDoc);
+        var root = finalStatusDoc!.RootElement;
+        Assert.Equal("Completed", root.GetProperty("stage").GetString());
+        Assert.True(root.GetProperty("success").GetBoolean());
+        var rows = root.GetProperty("rows");
+        Assert.Single(rows.EnumerateArray());
+        var first = rows[0];
+        Assert.Equal("Bruno", first.GetProperty("nome").GetString());
+        Assert.Equal("222", first.GetProperty("sheet2__telefone").GetString());
+    }
+
+    [Fact]
+    public async Task Unify_ThenFilterByUnifiedColumn_WithPropertyStyle_Works()
+    {
+        using var form = new MultipartFormDataContent();
+        using var file1 = new ByteArrayContent(Encoding.UTF8.GetBytes("nome,id\nAna,1\nBruno,2\nCarla,3\n"));
+        file1.Headers.ContentType = MediaTypeHeaderValue.Parse("text/csv");
+        form.Add(file1, "file1", "base.csv");
+
+        using var file2 = new ByteArrayContent(Encoding.UTF8.GetBytes("nome_guardiao,telefone\nAna,111\nBruno,222\n"));
+        file2.Headers.ContentType = MediaTypeHeaderValue.Parse("text/csv");
+        form.Add(file2, "file2", "guardiao.csv");
+
+        var uploadResponse = await _client.PostAsync("/api/query/upload", form);
+        uploadResponse.EnsureSuccessStatusCode();
+        var uploadJson = await uploadResponse.Content.ReadAsStringAsync();
+        using var uploadDoc = JsonDocument.Parse(uploadJson);
+        var jobId = uploadDoc.RootElement.GetProperty("jobId").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(jobId));
+
+        var ready = false;
+        for (var i = 0; i < 50; i++)
+        {
+            await Task.Delay(100);
+            var statusResponse = await _client.GetAsync($"/api/query/status/{jobId}");
+            statusResponse.EnsureSuccessStatusCode();
+            var statusJson = await statusResponse.Content.ReadAsStringAsync();
+            using var statusDoc = JsonDocument.Parse(statusJson);
+            if (string.Equals(statusDoc.RootElement.GetProperty("stage").GetString(), "Ready", StringComparison.OrdinalIgnoreCase))
+            {
+                ready = true;
+                break;
+            }
+        }
+
+        Assert.True(ready);
+
+        var unifyResponse = await _client.PostAsJsonAsync($"/api/query/{jobId}/unify", new
+        {
+            primarySheetName = "sheet1",
+            primaryKeyColumn = "nome",
+            comparisons = new[]
+            {
+                new
+                {
+                    sheetName = "sheet2",
+                    compareColumn = "nome_guardiao"
+                }
+            }
+        });
+        unifyResponse.EnsureSuccessStatusCode();
+
+        var executeResponse = await _client.PostAsJsonAsync($"/api/query/{jobId}/execute", new
+        {
+            code = """
+                return rows
+                    .Where(row => row.sheet2__telefone == "222")
+                    .ToList();
+                """,
+            maxRows = 100,
+            timeoutMs = 3000
+        });
+        executeResponse.EnsureSuccessStatusCode();
+
+        var executeJson = await executeResponse.Content.ReadAsStringAsync();
+        using var executeDoc = JsonDocument.Parse(executeJson);
+        var queryId = executeDoc.RootElement.GetProperty("queryId").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(queryId));
+
+        JsonDocument? finalStatusDoc = null;
+        for (var i = 0; i < 50; i++)
+        {
+            await Task.Delay(100);
+            var statusResponse = await _client.GetAsync($"/api/query/execute/{queryId}");
+            statusResponse.EnsureSuccessStatusCode();
+            var statusJson = await statusResponse.Content.ReadAsStringAsync();
+            finalStatusDoc?.Dispose();
+            finalStatusDoc = JsonDocument.Parse(statusJson);
+            var stage = finalStatusDoc.RootElement.GetProperty("stage").GetString();
+            if (stage is "Completed" or "Failed")
+            {
+                break;
+            }
+        }
+
+        Assert.NotNull(finalStatusDoc);
+        var root = finalStatusDoc!.RootElement;
+        Assert.Equal("Completed", root.GetProperty("stage").GetString());
+        Assert.True(root.GetProperty("success").GetBoolean());
+        var rows = root.GetProperty("rows");
+        Assert.Single(rows.EnumerateArray());
+        var first = rows[0];
+        Assert.Equal("Bruno", first.GetProperty("nome").GetString());
+        Assert.Equal("222", first.GetProperty("sheet2__telefone").GetString());
     }
 }

@@ -1,4 +1,7 @@
-﻿using System.Dynamic;
+﻿using System;
+using System.Collections.Generic;
+using System.Dynamic;
+using System.Linq;
 using System.Text.Json.Serialization;
 using SpreadsheetFilterApp.QuerySandboxHost.Normalization;
 
@@ -74,6 +77,66 @@ public sealed class RowValue
     public static implicit operator string?(RowValue value)
     {
         return value._value;
+    }
+
+    public static bool operator ==(RowValue? left, RowValue? right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return true;
+        }
+
+        if (left is null || right is null)
+        {
+            return false;
+        }
+
+        return string.Equals(left._value, right._value, StringComparison.Ordinal);
+    }
+
+    public static bool operator !=(RowValue? left, RowValue? right)
+    {
+        return !(left == right);
+    }
+
+    public static bool operator ==(RowValue? left, string? right)
+    {
+        return string.Equals(left?._value, right, StringComparison.Ordinal);
+    }
+
+    public static bool operator !=(RowValue? left, string? right)
+    {
+        return !(left == right);
+    }
+
+    public static bool operator ==(string? left, RowValue? right)
+    {
+        return string.Equals(left, right?._value, StringComparison.Ordinal);
+    }
+
+    public static bool operator !=(string? left, RowValue? right)
+    {
+        return !(left == right);
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is RowValue other)
+        {
+            return this == other;
+        }
+
+        if (obj is string text)
+        {
+            return this == text;
+        }
+
+        return false;
+    }
+
+    public override int GetHashCode()
+    {
+        return (_value ?? string.Empty).GetHashCode(StringComparison.Ordinal);
     }
 }
 

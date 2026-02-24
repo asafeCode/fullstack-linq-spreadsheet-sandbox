@@ -73,4 +73,32 @@ test.describe("LINQ Sandbox E2E Core", () => {
     await expect(viewer.getByRole("button", { name: "sheet1" })).toBeVisible();
     await expect(viewer.getByRole("button", { name: "sheet2" })).toBeVisible();
   });
+
+  test("save query button persists, load by id replaces editor text, and delete removes saved item", { timeout: 20000 }, async ({ page }) => {
+    await page.goto("/");
+
+    const queryName = `E2E Query ${Date.now()}`;
+    const savedCode = "rows.Where(row => true)";
+    const editedCode = "return rows.Where(r => true).ToList();";
+    await expect(page.locator("[data-slot='linq-code-value']")).toContainText(savedCode);
+
+    await page.locator("[data-slot='saved-query-name-input']").fill(queryName);
+    await page.locator("[data-slot='save-query-button']").click();
+
+    const savedItem = page.locator("[data-slot='saved-query-item']").filter({ hasText: queryName }).first();
+    await expect(savedItem).toBeVisible();
+
+    const savedId = await savedItem.getAttribute("data-saved-query-id");
+    expect(savedId).not.toBeNull();
+
+    await page.getByRole("button", { name: "Gerar LINQ pelos filtros" }).click();
+    await expect(page.locator("[data-slot='linq-code-value']")).toContainText(editedCode);
+
+    await savedItem.click();
+    await expect(page.locator("[data-slot='linq-code-value']")).toContainText(savedCode);
+
+    const deleteButton = page.locator(`[data-slot='delete-saved-query-button'][data-saved-query-id='${savedId}']`);
+    await deleteButton.click();
+    await expect(page.locator("[data-slot='saved-query-item']").filter({ hasText: queryName })).toHaveCount(0);
+  });
 });

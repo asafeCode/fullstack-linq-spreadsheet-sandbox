@@ -1,8 +1,12 @@
+using System;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using SpreadsheetFilterApp.Application.DTOs;
 using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 
 namespace SpreadsheetFilterApp.Infrastructure.Scripting.Roslyn;

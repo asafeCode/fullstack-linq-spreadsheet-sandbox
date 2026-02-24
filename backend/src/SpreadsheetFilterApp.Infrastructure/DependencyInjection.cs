@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SpreadsheetFilterApp.Application.Abstractions.Persistence;
 using SpreadsheetFilterApp.Application.Abstractions.Scripting;
@@ -15,7 +16,7 @@ namespace SpreadsheetFilterApp.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration? configuration = null)
     {
         services.AddSingleton<IColumnNameNormalizer, ColumnNameNormalizer>();
         services.AddSingleton<IColumnTypeInferer, ColumnTypeInferer>();
@@ -32,6 +33,17 @@ public static class DependencyInjection
 
         services.AddSingleton<ITempFileStore, TempFileStore>();
         services.AddSingleton<IClock, SystemClock>();
+
+        if (configuration is not null)
+        {
+            services.Configure<SavedLinqQueryStoreOptions>(configuration.GetSection(SavedLinqQueryStoreOptions.SectionName));
+        }
+        else
+        {
+            services.Configure<SavedLinqQueryStoreOptions>(_ => { });
+        }
+
+        services.AddSingleton<ISavedLinqQueryStore, SqliteSavedLinqQueryStore>();
 
         return services;
     }

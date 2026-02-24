@@ -1,3 +1,5 @@
+using System;
+
 namespace SpreadsheetFilterApp.Infrastructure.Scripting.Roslyn;
 
 public sealed class SandboxSecurityPolicy

@@ -9,7 +9,7 @@ export interface DataGridProps {
   emptyMessage?: string;
 }
 
-const PAGE_SIZE = 12;
+const DEFAULT_PAGE_SIZE = 20;
 
 function copyText(text: string): void {
   void navigator.clipboard.writeText(text);
@@ -18,6 +18,7 @@ function copyText(text: string): void {
 export function DataGrid({ rows, emptyMessage = "No rows" }: DataGridProps) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_PAGE_SIZE);
 
   const columns = useMemo(() => {
     const first = rows[0];
@@ -35,9 +36,9 @@ export function DataGrid({ rows, emptyMessage = "No rows" }: DataGridProps) {
     );
   }, [rows, query]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
   const currentPage = Math.min(page, pageCount);
-  const pageRows = filteredRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const pageRows = filteredRows.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   return (
     <div data-slot="data-grid" className="space-y-3">
@@ -83,7 +84,7 @@ export function DataGrid({ rows, emptyMessage = "No rows" }: DataGridProps) {
                     const value = row[column] ?? "";
                     const isEmpty = value.trim() === "";
                     return (
-                      <td key={`${column}-${index}`} className={cn("group border-b border-border px-3 py-2 align-top", isEmpty && "text-muted-foreground")}> 
+                      <td key={`${column}-${index}`} className={cn("group border-b border-border px-3 py-2 align-top", isEmpty && "text-muted-foreground")}>
                         <div className="flex items-start justify-between gap-2">
                           <span className="max-w-52 truncate" title={value}>{isEmpty ? "NULL" : value}</span>
                           <button
@@ -106,11 +107,26 @@ export function DataGrid({ rows, emptyMessage = "No rows" }: DataGridProps) {
         </table>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>
           {filteredRows.length} rows · page {currentPage}/{pageCount}
         </span>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <label htmlFor="rows-per-page" className="text-xs text-muted-foreground">Rows/page</label>
+          <select
+            id="rows-per-page"
+            value={rowsPerPage}
+            onChange={(event) => {
+              setRowsPerPage(Number(event.target.value));
+              setPage(1);
+            }}
+            className="h-8 rounded-lg border border-input bg-surface px-2 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {Array.from({ length: 11 }, (_, index) => {
+              const value = 10 + index;
+              return <option key={value} value={value}>{value}</option>;
+            })}
+          </select>
           <Button variant="secondary" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1}>
             Prev
           </Button>
@@ -122,4 +138,3 @@ export function DataGrid({ rows, emptyMessage = "No rows" }: DataGridProps) {
     </div>
   );
 }
-

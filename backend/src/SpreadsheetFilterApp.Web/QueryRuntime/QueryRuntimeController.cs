@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace SpreadsheetFilterApp.Web.QueryRuntime;
 
@@ -12,12 +15,22 @@ public sealed class QueryRuntimeController(IQueryJobService jobs) : ControllerBa
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(90 * 1024 * 1024)]
     public async Task<ActionResult<object>> Upload(
-        [FromForm] IFormFile file1,
+        [FromForm(Name = "file")] IFormFile? file,
+        [FromForm] IFormFile? file1,
         [FromForm] IFormFile? file2,
         [FromForm] IFormFile? file3,
         CancellationToken cancellationToken)
     {
-        var jobId = await _jobs.CreateUploadJobAsync(file1, file2, file3, cancellationToken);
+        var primaryFile = file1 ?? file;
+        if (primaryFile is null)
+        {
+            return BadRequest(new
+            {
+                message = "Missing file. Send multipart/form-data with 'file1' (or alias 'file')."
+            });
+        }
+
+        var jobId = await _jobs.CreateUploadJobAsync(primaryFile, file2, file3, cancellationToken);
         return Ok(new { jobId });
     }
 

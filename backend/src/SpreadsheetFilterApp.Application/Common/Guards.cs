@@ -1,3 +1,5 @@
+using System;
+
 namespace SpreadsheetFilterApp.Application.Common;
 
 public static class Guards
